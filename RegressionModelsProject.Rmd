@@ -1,0 +1,93 @@
+---
+title: "Fuel Effecincy Evaluation"
+author: "Seth Dobrin"
+date: "February 16th, 2016"
+output: 
+  pdf_document: 
+    fig_width: 8
+    number_sections: yes
+---
+```{r knitR options, echo = FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=TRUE, tidy = TRUE, message=FALSE, warnings=FALSE, fig.width=8, fig.height=4, cache=TRUE, results="hide")
+```
+#Executive Summary
+This study eplores the relationship of fuel effeciancy (measure as miles per gallon) and transmission type utilizing regressions analysis. In this study we will look at the effect of transmission type on MPG performance and answer the question: Is an automatic or manual transmission better for MPG? Additionally, we will quantify the MPG difference between automatic and manual transmissions. As part of this analysis we will explore other factors that may contribute to MPG performance
+#Data Processing & Eploration
+Load the data and perfom basic exploration
+```{r Data Processing , results = "hold"}
+data(mtcars)
+M<-cor(mtcars)
+mtcars$am   <- factor(mtcars$am,labels=c("Automatic","Manual")) #convert 'am' to factor
+mtcars$names <- as.factor(rownames(mtcars))
+n <- length(mtcars$mpg)
+alpha <- 0.05
+head(mtcars,5)
+```
+#Eploratory Analysis
+Figure 1 examines the correlations accross the data set. If you use this to visually examine which factors are correlated with a fuel consumption (mpg) you can see that the strongest correlations are number of cylinders (cyl), displacement (disp), horsepower (hp) and weight (wt). Transmisison type has a lesser correlation, but is none the less still correlated to mpg and will be considered as requested dispite the weaker correlation. Figure 2 examines the varriance between mpg and transmission type by creating a boxplot that demonstrates a slight significant increase in MPG with a manual transmission. This is futher confirmed by performing a t-test which yields a p-value of 0.0014 (Table 1).
+##Paired t-test
+Table 1 shows the output of the t-test with significance demonstrated for an increase in fuel effeciancy accosiated with transmission type with a p-value of 0.01374.
+```{r t-test}
+ttest<-t.test(mpg~am, data=mtcars)
+```
+
+##Regression Analysis
+Simple model of miles per galon (mpg) and transmission type (am) (Table 2)
+```{r Base Model}
+mtBaseModel <- lm(mpg ~ am, data = mtcars)
+baseResid <- summary(mtBaseModel)$sigma
+```
+Figure 1 shows the factors correlated to mpg. These factors are used to crerate multiple regression models (Table 3).
+```{r Multiple Regression}
+mtMultiModel <- lm(mpg ~ am + cyl + disp + wt, data = mtcars)
+```
+Examine the variance accross the diferent models using an ANOVA (Table 4)
+```{r ANOVA}
+model1 <- lm(mpg ~ am, data = mtcars)
+model2 <- lm(mpg ~ am + cyl, data = mtcars)
+model3 <- update(model1, mpg ~ am + cyl + disp)
+model4 <- update(model1, mpg ~ am + cyl + disp + wt)
+sig <- anova(model1, model2, model3, model4)
+```
+Table 4 show the output of the ANOVA. Models 2 and 4 are highly sigificant with p-vales of 1.264e-08 and 0.05468 respectively
+
+#Conclusions
+Individually each of the factors effect the fueld effeicency of the cars in the data set. The ANOVA demonstrates the significance of the multifactor model.  This multifactor model enhances the predictability. The muli model provides a much better fit as demonstarted by th R^2 values. The base model has an R^2 of 0.3598 and the multi model has an R^2 value of 0.8327 as laid out in Tables 2 & 3 respectively. Table 4 shows the significance of each model used in the multi factor regression analaysis as determined by an analysis of variance (ANOVA). Models 1,  2 and 4 show high significance based on the inital paired t-tes for models 1 and the ANOVA for models 2 and 4. A manual transmission improves fuel effcency, however the combination of an automatic transmisison, 4 cylindar engine, low displaement and low weight have an even more significant impact on fuel effciency.
+
+#Appendix
+##Figure 1. Correlation Plot.
+```{r Figure 1. Correlation Plot}
+library(corrplot)
+corrplot.mixed(M, sig.level = 0.05, tl.pos = "d", tl.srt = 60)
+```
+
+##Figure 2. Boxplot of miles per galon by transmission type
+```{r Figure 2. Boxplot}
+library(ggplot2)
+qplot(factor(am), mpg, data = mtcars, geom = c("boxplot", "jitter"), fill = factor(am))
+```
+
+##Figure 3. Diagnostic Plots (includes residual)
+```{r Figure 3. Diagnostic Plots}
+library(ggfortify)
+autoplot(lm(mpg ~ am + cyl + disp + wt, data = mtcars), label.size = 3, ncol = 2, which = 1:6)
+```
+
+##Table 1: Summary of t-test
+```{r Table 1, results = "hold"}
+library(pander)
+pandoc.table(glance(t.test(mpg~am, data=mtcars)), style = "simple")
+```
+##Table 2: Summary of base model
+```{r Table 2, results ="hold"}
+pandoc.table(glance(mtBaseModel), style = "simple")
+```
+##Table 3: Summary of multi-factor model
+```{r Table 3, results = "hold"}
+pandoc.table(glance(mtMultiModel), style = "simple")
+```
+##Table 4: Summary of anaysis of variance
+```{r Table 4, results = "hold"}
+pandoc.table(tidy(sig), style = "simple")
+```
